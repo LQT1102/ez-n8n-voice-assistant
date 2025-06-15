@@ -1,0 +1,81 @@
+{
+  "name": "Voice Assistant - Simple HTTP Response",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "voice-assistant",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "voice-assistant-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Lấy dữ liệu từ webhook\nconst command = $json.command;\nconst timestamp = $json.timestamp;\nconst userId = $json.userId;\n\n// Log để debug\nconsole.log('Received command:', command);\n\n// Xử lý logic nghiệp vụ ở đây\n// Ví dụ: phân tích command và tạo response\nlet response = '';\n\nif (command.toLowerCase().includes('xin chào') || command.toLowerCase().includes('hello')) {\n  response = 'Xin chào! Tôi là trợ lý AI của bạn. Tôi có thể giúp gì cho bạn?';\n} else if (command.toLowerCase().includes('thời tiết')) {\n  response = 'Tôi chưa thể kiểm tra thời tiết ngay bây giờ, nhưng bạn có thể kiểm tra trên ứng dụng thời tiết của mình.';\n} else if (command.toLowerCase().includes('cảm ơn')) {\n  response = 'Không có gì! Tôi luôn sẵn sàng giúp đỡ bạn.';\n} else if (command.toLowerCase().includes('tạm biệt') || command.toLowerCase().includes('bye')) {\n  response = 'Tạm biệt! Hẹn gặp lại bạn sau nhé!';\n} else {\n  response = `Tôi đã nghe bạn nói: \"${command}\". Đây là phản hồi tự động từ n8n workflow.`;\n}\n\n// Trả về response\nreturn {\n  message: response,\n  originalCommand: command,\n  timestamp: new Date().toISOString(),\n  userId: userId,\n  processed: true\n};"
+      },
+      "id": "process-command",
+      "name": "Process Command",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.message }}",
+        "options": {
+          "responseHeaders": {
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/plain; charset=utf-8"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "http-response",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Command": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "1"
+}

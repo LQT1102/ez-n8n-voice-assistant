@@ -1,0 +1,130 @@
+{
+  "name": "Voice Assistant SSE",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "voice-assistant",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "sse-trigger",
+      "name": "SSE Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "voice-assistant-sse"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Thiết lập SSE headers\nconst headers = {\n  'Content-Type': 'text/event-stream',\n  'Cache-Control': 'no-cache',\n  'Connection': 'keep-alive',\n  'Access-Control-Allow-Origin': '*',\n  'Access-Control-Allow-Headers': 'Cache-Control'\n};\n\n// Tạo dữ liệu SSE mẫu\nconst sseData = {\n  message: 'Kết nối SSE thành công! Tôi đang lắng nghe...',\n  timestamp: new Date().toISOString(),\n  type: 'connection'\n};\n\n// Format SSE data\nconst sseMessage = `data: ${JSON.stringify(sseData)}\\n\\n`;\n\nreturn {\n  headers: headers,\n  body: sseMessage,\n  statusCode: 200\n};"
+      },
+      "id": "setup-sse",
+      "name": "Setup SSE",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "{{$json.body}}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/event-stream"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-cache"
+              },
+              {
+                "name": "Connection",
+                "value": "keep-alive"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "sse-response",
+      "name": "SSE Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Workflow để gửi tin nhắn qua SSE\n// Được kích hoạt bởi webhook khác hoặc trigger\n\nconst message = $json.message || 'Tin nhắn mặc định';\nconst timestamp = $json.timestamp || new Date().toISOString();\nconst userId = $json.userId || 'unknown';\n\n// Tạo phản hồi SSE\nconst sseData = {\n  message: message,\n  timestamp: timestamp,\n  userId: userId,\n  type: 'response'\n};\n\n// Format cho SSE\nconst sseMessage = `data: ${JSON.stringify(sseData)}\\n\\n`;\n\nreturn {\n  sseMessage: sseMessage,\n  data: sseData\n};"
+      },
+      "id": "format-message",
+      "name": "Format Message for SSE",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.type}}",
+              "operation": "equal",
+              "value2": "message"
+            }
+          ]
+        }
+      },
+      "id": "check-message-type",
+      "name": "Check Message Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [240, 480]
+    }
+  ],
+  "connections": {
+    "SSE Trigger": {
+      "main": [
+        [
+          {
+            "node": "Setup SSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup SSE": {
+      "main": [
+        [
+          {
+            "node": "SSE Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Message Type": {
+      "main": [
+        [
+          {
+            "node": "Format Message for SSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  "versionId": "1"
+}
