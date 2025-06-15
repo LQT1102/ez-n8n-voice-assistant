@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import axios from "axios";
-import { VoiceMessage, N8nResponse } from "../types";
 
 interface Message {
   id: string;

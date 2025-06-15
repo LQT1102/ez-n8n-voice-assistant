@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { MessageList } from "./components/MessageList";
 import { ConfigPanel } from "./components/ConfigPanel";
 import { LoginPage } from "./components/LoginPage";
