@@ -1,0 +1,6 @@
+# Netlify Redirects để tránh CORS và Mixed Content
+# Proxy tất cả requests từ /api/* tới n8n server
+/api/* http://89.233.104.133:5678/:splat 200
+
+# Fallback cho SPA routing
+/* /index.html 200 

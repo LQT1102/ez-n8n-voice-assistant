@@ -292,3 +292,114 @@ return {
    - Headers: 
      - `Content-Type`: `text/plain; charset=utf-8`
      - `Access-Control-Allow-Origin`: `*`
+     - `Access-Control-Allow-Headers`: `Content-Type, key`
+     - `Access-Control-Allow-Methods`: `POST, OPTIONS`
+
+## 🌐 Deployment và CORS
+
+### Xử lý CORS cho Production
+
+Khi deploy lên Netlify/Vercel, bạn cần cấu hình CORS trong n8n:
+
+#### Option 1: Cấu hình trong n8n Workflow
+
+Thêm một **HTTP Request Node** trước **Respond to Webhook** để set CORS headers:
+
+```javascript
+// Function Node - Set CORS Headers
+const response = $json;
+
+// Set CORS headers
+return {
+  ...response,
+  headers: {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, key',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'text/plain; charset=utf-8'
+  }
+};
+```
+
+#### Option 2: Cấu hình n8n Global CORS
+
+Trong file cấu hình n8n (docker-compose.yml hoặc environment):
+
+```yaml
+environment:
+  - N8N_CORS_ORIGIN=*
+  - N8N_CORS_HEADERS=Content-Type,key
+  - N8N_CORS_METHODS=GET,POST,OPTIONS
+```
+
+#### Option 3: Sử dụng Reverse Proxy
+
+Cấu hình Nginx hoặc Cloudflare để handle CORS:
+
+```nginx
+location /webhook/ {
+    if ($request_method = 'OPTIONS') {
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Headers' 'Content-Type, key';
+        add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS';
+        return 204;
+    }
+    
+    add_header 'Access-Control-Allow-Origin' '*';
+    add_header 'Access-Control-Allow-Headers' 'Content-Type, key';
+    
+    proxy_pass http://n8n-server:5678;
+}
+```
+
+### Netlify Redirects (Alternative)
+
+Tạo file `public/_redirects` trong dự án React:
+
+```
+/api/* https://your-n8n-server.com/:splat 200
+```
+
+Sau đó cập nhật webhook URL trong app thành `/api/webhook/voice-assistant`
+
+### Xử lý Mixed Content Error
+
+Nếu gặp lỗi "Mixed Content" (HTTPS site gọi HTTP API):
+
+#### Giải pháp 1: Setup HTTPS cho n8n server
+
+```bash
+# Sử dụng Nginx reverse proxy với SSL
+server {
+    listen 443 ssl;
+    server_name your-domain.com;
+    
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+    
+    location / {
+        proxy_pass http://localhost:5678;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+#### Giải pháp 2: Netlify Redirects (Khuyến nghị)
+
+File `public/_redirects` sẽ proxy HTTP requests qua HTTPS:
+
+```
+# Netlify proxy HTTP n8n server qua HTTPS
+/api/* http://your-ip:5678/:splat 200
+```
+
+Cập nhật webhook URL thành: `https://your-app.netlify.app/api/webhook/...`
+
+#### Giải pháp 3: Cloudflare Tunnel
+
+```bash
+# Install cloudflared
+cloudflared tunnel --url http://localhost:5678
+# Sẽ tạo public HTTPS URL cho n8n
+```
