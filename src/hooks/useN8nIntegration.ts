@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import axios from "axios";
 
 interface Message {
@@ -19,12 +19,55 @@ interface UseN8nIntegrationReturn {
   error: string | null;
   sendMessage: (command: string) => Promise<void>;
   clearMessages: () => void;
+  sessionId: string;
 }
 
-export const useN8nIntegration = ({ webhookUrl, apiKey }: UseN8nIntegrationProps): UseN8nIntegrationReturn => {
+// Utility function để tạo GUID chuẩn
+const generateGUID = (): string => {
+  // Sử dụng crypto.randomUUID nếu có, fallback về custom implementation
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  // Fallback: tạo GUID theo format standard
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+// Utility function để tạo user ID persistent
+const getUserId = (): string => {
+  let userId = localStorage.getItem("voice-assistant-user-id");
+  if (!userId) {
+    userId = generateGUID();
+    localStorage.setItem("voice-assistant-user-id", userId);
+  }
+  return userId;
+};
+
+export const useN8nIntegration = ({
+  webhookUrl,
+  apiKey,
+}: UseN8nIntegrationProps): UseN8nIntegrationReturn => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isSending, setIsSending] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Tạo sessionId mới mỗi khi khởi tạo hook (mỗi lần refresh app)
+  const sessionIdRef = useRef<string>(generateGUID());
+  const userIdRef = useRef<string>(getUserId());
+
+  // Log session info khi khởi tạo
+  useEffect(() => {
+    console.log("🎯 New Chat Session Started:", {
+      sessionId: sessionIdRef.current,
+      userId: userIdRef.current,
+      timestamp: new Date().toISOString(),
+      note: "SessionId sẽ thay đổi mỗi khi refresh app (F5)",
+    });
+  }, []);
 
   const sendMessage = useCallback(
     async (command: string) => {
@@ -35,7 +78,7 @@ export const useN8nIntegration = ({ webhookUrl, apiKey }: UseN8nIntegrationProps
 
       // Thêm tin nhắn của user vào chat
       const userMessage: Message = {
-        id: Date.now().toString(),
+        id: generateGUID(),
         text: command,
         type: "user",
         timestamp: new Date(),
@@ -54,19 +97,46 @@ export const useN8nIntegration = ({ webhookUrl, apiKey }: UseN8nIntegrationProps
           headers["key"] = apiKey;
         }
 
-        // Gửi request tới n8n
-        const response = await axios.post(
-          webhookUrl,
-          {
-            command: command.trim(),
-            timestamp: new Date().toISOString(),
-            userId: "voice-assistant-user",
+        // Chuẩn bị payload với session information
+        const payload = {
+          command: command.trim(),
+          timestamp: new Date().toISOString(),
+          userId: userIdRef.current,
+          sessionId: sessionIdRef.current, // GUID được sinh ngẫu nhiên mỗi phiên
+          messageId: userMessage.id,
+          // Thêm context về cuộc hội thoại
+          conversationContext: {
+            messageCount: messages.length + 1, // +1 vì đã thêm user message
+            conversationStarted:
+              messages.length === 0 ? new Date().toISOString() : undefined,
+            previousMessages: messages.slice(-3).map((msg) => ({
+              // Gửi 3 tin nhắn gần nhất làm context
+              type: msg.type,
+              text: msg.text,
+              timestamp: msg.timestamp.toISOString(),
+            })),
           },
-          {
-            headers,
-            timeout: 30000, // 30 giây timeout
-          }
-        );
+        };
+
+        console.log("📤 Sending to n8n with SessionId:", {
+          sessionId: sessionIdRef.current,
+          userId: userIdRef.current,
+          command: command.trim(),
+          messageCount: payload.conversationContext.messageCount,
+          fullPayload: payload,
+        });
+
+        // Gửi request tới n8n
+        const response = await axios.post(webhookUrl, payload, {
+          headers,
+          timeout: 30000, // 30 giây timeout
+        });
+
+        console.log("📥 Received from n8n:", {
+          sessionId: sessionIdRef.current,
+          responseData: response.data,
+          responseHeaders: response.headers,
+        });
 
         // Xử lý response từ n8n
         let assistantText = "";
@@ -87,7 +157,7 @@ export const useN8nIntegration = ({ webhookUrl, apiKey }: UseN8nIntegrationProps
 
         // Thêm phản hồi từ assistant vào chat
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: generateGUID(),
           text: assistantText,
           type: "assistant",
           timestamp: new Date(),
@@ -119,7 +189,7 @@ export const useN8nIntegration = ({ webhookUrl, apiKey }: UseN8nIntegrationProps
 
         // Thêm error message vào chat
         const errorChatMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: generateGUID(),
           text: `❌ ${errorMessage}`,
           type: "assistant",
           timestamp: new Date(),
@@ -130,12 +200,20 @@ export const useN8nIntegration = ({ webhookUrl, apiKey }: UseN8nIntegrationProps
         setIsSending(false);
       }
     },
-    [webhookUrl, apiKey]
+    [webhookUrl, apiKey, messages]
   );
 
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
+    // Tạo session ID mới khi clear messages (tương đương refresh phiên chat)
+    sessionIdRef.current = generateGUID();
+    console.log("🔄 New Chat Session Created:", {
+      newSessionId: sessionIdRef.current,
+      userId: userIdRef.current,
+      timestamp: new Date().toISOString(),
+      note: "Session được làm mới thủ công",
+    });
   }, []);
 
   return {
@@ -144,5 +222,6 @@ export const useN8nIntegration = ({ webhookUrl, apiKey }: UseN8nIntegrationProps
     error,
     sendMessage,
     clearMessages,
+    sessionId: sessionIdRef.current,
   };
 };

@@ -55,6 +55,7 @@ function App() {
     error: n8nError,
     sendMessage,
     clearMessages,
+    sessionId,
   } = useN8nIntegration({
     webhookUrl: config.n8nWebhookUrl,
     apiKey: authState.apiKey,
@@ -249,6 +250,15 @@ function App() {
             <div className="text-sm text-gray-600">
               <p>
                 © 2024 EZ n8n Voice Assistant. Được xây dựng với React & n8n.
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Session ID:{" "}
+                <span className="font-mono text-blue-600">
+                  {sessionId.substring(0, 8)}...
+                </span>
+                <span className="ml-2 text-gray-400">
+                  • Refresh (F5) để tạo session mới
+                </span>
               </p>
             </div>
             <div className="flex items-center space-x-4 text-sm text-gray-500">
