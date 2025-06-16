@@ -92,6 +92,7 @@ export interface N8nResponse {
 
 export interface AppConfig {
   n8nWebhookUrl: string;
+  googleSheetUrl?: string;
 }
 
 export interface AuthState {

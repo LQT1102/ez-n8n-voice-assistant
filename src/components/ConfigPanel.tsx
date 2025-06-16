@@ -16,7 +16,10 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onConfigChange
   const handleInputChange = (field: keyof AppConfig, value: string) => {
     const newConfig = { ...localConfig, [field]: value };
     setLocalConfig(newConfig);
-    setHasChanges(newConfig.n8nWebhookUrl !== config.n8nWebhookUrl);
+    setHasChanges(
+      newConfig.n8nWebhookUrl !== config.n8nWebhookUrl ||
+        newConfig.googleSheetUrl !== config.googleSheetUrl
+    );
   };
 
   // Lưu cấu hình
@@ -25,7 +28,10 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onConfigChange
     setHasChanges(false);
 
     // Lưu vào localStorage
-    localStorage.setItem("n8n-voice-assistant-config", JSON.stringify(localConfig));
+    localStorage.setItem(
+      "n8n-voice-assistant-config",
+      JSON.stringify(localConfig)
+    );
   };
 
   // Reset về cấu hình hiện tại
@@ -37,10 +43,18 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onConfigChange
   // Load cấu hình mặc định
   const handleLoadDefaults = () => {
     const defaultConfig: AppConfig = {
-      n8nWebhookUrl: import.meta.env.VITE_N8N_WEBHOOK_URL || "http://localhost:5678/webhook/voice-assistant",
+      n8nWebhookUrl:
+        import.meta.env.VITE_N8N_WEBHOOK_URL ||
+        "http://localhost:5678/webhook/voice-assistant",
+      googleSheetUrl:
+        import.meta.env.VITE_GOOGLE_SHEET_URL ||
+        "https://docs.google.com/spreadsheets/d/1YOUR_SHEET_ID/edit#gid=0",
     };
     setLocalConfig(defaultConfig);
-    setHasChanges(defaultConfig.n8nWebhookUrl !== config.n8nWebhookUrl);
+    setHasChanges(
+      defaultConfig.n8nWebhookUrl !== config.n8nWebhookUrl ||
+        defaultConfig.googleSheetUrl !== config.googleSheetUrl
+    );
   };
 
   return (
@@ -53,14 +67,24 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onConfigChange
                  focus:ring-2 focus:ring-gray-500"
         title="Cấu hình"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
             d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
           />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
         </svg>
       </button>
 
@@ -70,10 +94,25 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onConfigChange
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-800">Cấu hình n8n</h2>
-              <button onClick={onToggleVisibility} className="text-gray-400 hover:text-gray-600 focus:outline-none">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <h2 className="text-xl font-bold text-gray-800">
+                Cấu hình ứng dụng
+              </h2>
+              <button
+                onClick={onToggleVisibility}
+                className="text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -82,17 +121,42 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onConfigChange
             <div className="p-6 space-y-6">
               {/* Webhook URL */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  n8n Webhook URL
+                </label>
                 <input
                   type="url"
                   value={localConfig.n8nWebhookUrl}
-                  onChange={(e) => handleInputChange("n8nWebhookUrl", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("n8nWebhookUrl", e.target.value)
+                  }
                   placeholder="http://localhost:5678/webhook/voice-assistant"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none 
                            focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  URL để gửi tin nhắn tới n8n workflow và nhận phản hồi trực tiếp
+                  URL để gửi tin nhắn tới n8n workflow và nhận phản hồi trực
+                  tiếp
+                </p>
+              </div>
+
+              {/* Google Sheet URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Google Sheet URL
+                </label>
+                <input
+                  type="url"
+                  value={localConfig.googleSheetUrl || ""}
+                  onChange={(e) =>
+                    handleInputChange("googleSheetUrl", e.target.value)
+                  }
+                  placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none 
+                           focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  URL Google Sheet để lưu trữ và xem thông tin đã nhập
                 </p>
               </div>
 
@@ -100,14 +164,20 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onConfigChange
               {hasChanges && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <div className="flex items-center">
-                    <svg className="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                      className="w-5 h-5 text-yellow-500 mr-2"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
                         clipRule="evenodd"
                       />
                     </svg>
-                    <p className="text-yellow-700 text-sm">Có thay đổi chưa được lưu</p>
+                    <p className="text-yellow-700 text-sm">
+                      Có thay đổi chưa được lưu
+                    </p>
                   </div>
                 </div>
               )}
@@ -147,10 +217,22 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onConfigChange
 
               {/* Help */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-blue-800 mb-2">💡 Hướng dẫn</h4>
+                <h4 className="text-sm font-semibold text-blue-800 mb-2">
+                  💡 Hướng dẫn
+                </h4>
                 <ul className="text-xs text-blue-700 space-y-1">
-                  <li>• Webhook URL: Endpoint để gửi tin nhắn và nhận phản hồi trực tiếp từ n8n</li>
-                  <li>• n8n workflow sẽ xử lý tin nhắn và trả về phản hồi ngay lập tức</li>
+                  <li>
+                    • <strong>n8n Webhook URL:</strong> Endpoint để gửi tin nhắn
+                    và nhận phản hồi trực tiếp từ n8n
+                  </li>
+                  <li>
+                    • <strong>Google Sheet URL:</strong> Link Google Sheet để
+                    lưu trữ và xem thông tin đã nhập
+                  </li>
+                  <li>
+                    • n8n workflow sẽ xử lý tin nhắn và trả về phản hồi ngay lập
+                    tức
+                  </li>
                   <li>• Đảm bảo n8n đang chạy và endpoint đã được cấu hình</li>
                   <li>• Cấu hình sẽ được lưu trong trình duyệt</li>
                 </ul>
